@@ -11,3 +11,197 @@ datasource db {
   directUrl         = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
   shadowDatabaseUrl = env("POSTGRES_URL_NON_POOLING") // used for migrations
 }
+
+// model for user
+model User {
+  id           Int           @id @default(autoincrement())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  email        String        @unique
+  name         String
+  password     String
+  bankAccounts BankAccount[]
+  UserSession  UserSession[]
+  Card         Card[]
+  Transaction  Transaction[]
+  Transfer     Transfer[]
+  Category     Category[]
+  Budget       Budget[]
+}
+
+// model for user session
+model UserSession {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  token     String   @unique
+  userId    Int
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+// enum for bank account type
+enum BankAccountType {
+  SAVINGS
+  CHECKING
+}
+
+// enum for bank account status
+enum BankAccountStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// model for bank account
+model BankAccount {
+  id                      Int               @id @default(autoincrement())
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  name                    String
+  balance                 Float
+  transactions            Transaction[]
+  User                    User?             @relation(fields: [userId], references: [id])
+  userId                  Int?
+  Bank                    Bank?             @relation(fields: [bankId], references: [id])
+  bankId                  Int?
+  type                    BankAccountType
+  status                  BankAccountStatus
+  TransferToBankAccount   Transfer[]        @relation("TransferToBankAccount")
+  TransferFromBankAccount Transfer[]        @relation("TransferFromBankAccount")
+}
+
+// model for bank
+model Bank {
+  id           Int           @id @default(autoincrement())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  name         String
+  bankAccounts BankAccount[]
+}
+
+// enum for transaction type
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+}
+
+// model for card
+model Card {
+  id              Int               @id @default(autoincrement())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  number          String            @unique
+  cvv             String
+  expiry          DateTime
+  userId          Int
+  User            User              @relation(fields: [userId], references: [id])
+  CardTransaction CardTransaction[]
+}
+
+// model for card transaction
+model CardTransaction {
+  id            Int             @id @default(autoincrement())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  amount        Float
+  transactionId String
+  type          TransactionType
+  cardId        Int
+  Card          Card            @relation(fields: [cardId], references: [id])
+}
+
+// model for category
+
+// model for transaction
+model Transaction {
+  id            Int             @id @default(autoincrement())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  amount        Float
+  transactionId String
+  type          TransactionType
+  bankAccountId Int
+  bankAccount   BankAccount     @relation(fields: [bankAccountId], references: [id])
+  User          User?           @relation(fields: [userId], references: [id])
+  userId        Int?
+  Category      Category?       @relation(fields: [categoryId], references: [id])
+  categoryId    Int?
+}
+
+// model for transfer
+model Transfer {
+  id              Int             @id @default(autoincrement())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  amount          Float
+  transactionId   String
+  type            TransactionType
+  bankAccountId   Int
+  bankAccount     BankAccount     @relation("TransferFromBankAccount", fields: [bankAccountId], references: [id])
+  toBankAccount   BankAccount     @relation("TransferToBankAccount", fields: [toBankAccountId], references: [id])
+  toBankAccountId Int
+  User            User?           @relation(fields: [userId], references: [id])
+  userId          Int?
+}
+
+// model for category
+model Category {
+  id             Int           @id @default(autoincrement())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  name           String
+  color          String
+  icon           String
+  User           User          @relation(fields: [userId], references: [id])
+  userId         Int
+  Transaction    Transaction[]
+  categoryType   CategoryType
+  parentId       Int?
+  parentCategory Category?     @relation("SubCategory", fields: [parentId], references: [id])
+  subCategory    Category[]    @relation("SubCategory")
+  Budget         Budget[]
+}
+
+// enum category type
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+// enum budget type
+enum BudgetType {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// enum budget status
+enum BudgetStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// enum budget rollover
+enum BudgetRollover {
+  ON
+  OFF
+}
+
+// model for budget
+model Budget {
+  id              Int            @id @default(autoincrement())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  allocatedAmount Float
+  spentAmount     Float
+  remainingAmount Float
+  startDate       DateTime
+  endDate         DateTime
+  categoryType    CategoryType
+  budgetType      BudgetType
+  budgetStatus    BudgetStatus
+  budgetRollover  BudgetRollover
+  categoryId      Int
+  Category        Category       @relation(fields: [categoryId], references: [id])
+  User            User           @relation(fields: [userId], references: [id])
+  userId          Int
+}
