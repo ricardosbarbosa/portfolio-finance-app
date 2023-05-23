@@ -12,7 +12,6 @@ datasource db {
   shadowDatabaseUrl = env("POSTGRES_URL_NON_POOLING") // used for migrations
 }
 
-// model for user
 model User {
   id           Int           @id @default(autoincrement())
   createdAt    DateTime      @default(now())
@@ -21,15 +20,14 @@ model User {
   name         String
   password     String
   bankAccounts BankAccount[]
-  UserSession  UserSession[]
+  Budget       Budget[]
   Card         Card[]
+  Category     Category[]
   Transaction  Transaction[]
   Transfer     Transfer[]
-  Category     Category[]
-  Budget       Budget[]
+  UserSession  UserSession[]
 }
 
-// model for user session
 model UserSession {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
@@ -39,37 +37,23 @@ model UserSession {
   User      User     @relation(fields: [userId], references: [id])
 }
 
-// enum for bank account type
-enum BankAccountType {
-  SAVINGS
-  CHECKING
-}
-
-// enum for bank account status
-enum BankAccountStatus {
-  ACTIVE
-  INACTIVE
-}
-
-// model for bank account
 model BankAccount {
   id                      Int               @id @default(autoincrement())
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
   name                    String
   balance                 Float
-  transactions            Transaction[]
-  User                    User?             @relation(fields: [userId], references: [id])
   userId                  Int?
-  Bank                    Bank?             @relation(fields: [bankId], references: [id])
   bankId                  Int?
   type                    BankAccountType
   status                  BankAccountStatus
-  TransferToBankAccount   Transfer[]        @relation("TransferToBankAccount")
+  Bank                    Bank?             @relation(fields: [bankId], references: [id])
+  User                    User?             @relation(fields: [userId], references: [id])
+  transactions            Transaction[]
   TransferFromBankAccount Transfer[]        @relation("TransferFromBankAccount")
+  TransferToBankAccount   Transfer[]        @relation("TransferToBankAccount")
 }
 
-// model for bank
 model Bank {
   id           Int           @id @default(autoincrement())
   createdAt    DateTime      @default(now())
@@ -78,13 +62,6 @@ model Bank {
   bankAccounts BankAccount[]
 }
 
-// enum for transaction type
-enum TransactionType {
-  DEPOSIT
-  WITHDRAWAL
-}
-
-// model for card
 model Card {
   id              Int               @id @default(autoincrement())
   createdAt       DateTime          @default(now())
@@ -97,7 +74,6 @@ model Card {
   CardTransaction CardTransaction[]
 }
 
-// model for card transaction
 model CardTransaction {
   id            Int             @id @default(autoincrement())
   createdAt     DateTime        @default(now())
@@ -109,9 +85,6 @@ model CardTransaction {
   Card          Card            @relation(fields: [cardId], references: [id])
 }
 
-// model for category
-
-// model for transaction
 model Transaction {
   id            Int             @id @default(autoincrement())
   createdAt     DateTime        @default(now())
@@ -120,14 +93,13 @@ model Transaction {
   transactionId String
   type          TransactionType
   bankAccountId Int
-  bankAccount   BankAccount     @relation(fields: [bankAccountId], references: [id])
-  User          User?           @relation(fields: [userId], references: [id])
   userId        Int?
-  Category      Category?       @relation(fields: [categoryId], references: [id])
   categoryId    Int?
+  bankAccount   BankAccount     @relation(fields: [bankAccountId], references: [id])
+  Category      Category?       @relation(fields: [categoryId], references: [id])
+  User          User?           @relation(fields: [userId], references: [id])
 }
 
-// model for transfer
 model Transfer {
   id              Int             @id @default(autoincrement())
   createdAt       DateTime        @default(now())
@@ -136,14 +108,13 @@ model Transfer {
   transactionId   String
   type            TransactionType
   bankAccountId   Int
+  toBankAccountId Int
+  userId          Int?
   bankAccount     BankAccount     @relation("TransferFromBankAccount", fields: [bankAccountId], references: [id])
   toBankAccount   BankAccount     @relation("TransferToBankAccount", fields: [toBankAccountId], references: [id])
-  toBankAccountId Int
   User            User?           @relation(fields: [userId], references: [id])
-  userId          Int?
 }
 
-// model for category
 model Category {
   id             Int           @id @default(autoincrement())
   createdAt      DateTime      @default(now())
@@ -151,42 +122,16 @@ model Category {
   name           String
   color          String
   icon           String
-  User           User          @relation(fields: [userId], references: [id])
   userId         Int
-  Transaction    Transaction[]
   categoryType   CategoryType
   parentId       Int?
+  Budget         Budget[]
   parentCategory Category?     @relation("SubCategory", fields: [parentId], references: [id])
   subCategory    Category[]    @relation("SubCategory")
-  Budget         Budget[]
+  User           User          @relation(fields: [userId], references: [id])
+  Transaction    Transaction[]
 }
 
-// enum category type
-enum CategoryType {
-  INCOME
-  EXPENSE
-}
-
-// enum budget type
-enum BudgetType {
-  WEEKLY
-  MONTHLY
-  YEARLY
-}
-
-// enum budget status
-enum BudgetStatus {
-  ACTIVE
-  INACTIVE
-}
-
-// enum budget rollover
-enum BudgetRollover {
-  ON
-  OFF
-}
-
-// model for budget
 model Budget {
   id              Int            @id @default(autoincrement())
   createdAt       DateTime       @default(now())
@@ -201,7 +146,43 @@ model Budget {
   budgetStatus    BudgetStatus
   budgetRollover  BudgetRollover
   categoryId      Int
+  userId          Int
   Category        Category       @relation(fields: [categoryId], references: [id])
   User            User           @relation(fields: [userId], references: [id])
-  userId          Int
+}
+
+enum BankAccountType {
+  SAVINGS
+  CHECKING
+}
+
+enum BankAccountStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+enum BudgetType {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum BudgetStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BudgetRollover {
+  ON
+  OFF
 }
