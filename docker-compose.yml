@@ -1,0 +1,29 @@
+version: "3"
+services:
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: your_username
+      POSTGRES_PASSWORD: your_password
+      POSTGRES_DB: your_database
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+  pgbouncer:
+    image: pgbouncer/pgbouncer
+    restart: always
+    platform: linux/amd64
+    environment:
+      - DATABASES=your_database = host=postgres port=5432 dbname=your_database user=your_username password=your_password
+    volumes:
+      - ./pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
+      - ./userlist.txt:/etc/pgbouncer/userlist.txt
+    ports:
+      - 6432:6432
+    depends_on:
+      - postgres
+    links:
+      - postgres
+

@@ -13,53 +13,46 @@ datasource db {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  email        String        @unique
-  name         String
-  password     String
-  bankAccounts BankAccount[]
-  Budget       Budget[]
-  Card         Card[]
-  Category     Category[]
-  Transaction  Transaction[]
-  Transfer     Transfer[]
-  UserSession  UserSession[]
+  id          Int           @id @default(autoincrement())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  email       String        @unique
+  name        String
+  password    String        @default("")
+  role        UserRole      @default(USER)
+  status      UserStatus    @default(ACTIVE)
+  accounts    Account[]
+  Budget      Budget[]
+  Card        Card[]
+  Category    Category[]
+  Transaction Transaction[]
+  Transfer    Transfer[]
+  UserSession UserSession[]
 }
 
 model UserSession {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  token     String   @unique
+  id        Int               @id @default(autoincrement())
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  token     String            @unique
+  status    UserSessionStatus
   userId    Int
-  User      User     @relation(fields: [userId], references: [id])
+  User      User              @relation(fields: [userId], references: [id])
 }
 
-model BankAccount {
-  id                      Int               @id @default(autoincrement())
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
-  name                    String
-  balance                 Float
-  userId                  Int?
-  bankId                  Int?
-  type                    BankAccountType
-  status                  BankAccountStatus
-  Bank                    Bank?             @relation(fields: [bankId], references: [id])
-  User                    User?             @relation(fields: [userId], references: [id])
-  transactions            Transaction[]
-  TransferFromBankAccount Transfer[]        @relation("TransferFromBankAccount")
-  TransferToBankAccount   Transfer[]        @relation("TransferToBankAccount")
-}
-
-model Bank {
-  id           Int           @id @default(autoincrement())
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  name         String
-  bankAccounts BankAccount[]
+model Account {
+  id                  Int           @id @default(autoincrement())
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  name                String
+  balance             Float
+  userId              Int?
+  type                AccountType
+  status              AccountStatus
+  User                User?         @relation(fields: [userId], references: [id])
+  transactions        Transaction[]
+  TransferFromAccount Transfer[]    @relation("TransferFromAccount")
+  TransferToAccount   Transfer[]    @relation("TransferToAccount")
 }
 
 model Card {
@@ -69,35 +62,36 @@ model Card {
   number          String            @unique
   cvv             String
   expiry          DateTime
+  type            CardType          @default(VISA)
   userId          Int
   User            User              @relation(fields: [userId], references: [id])
   CardTransaction CardTransaction[]
 }
 
 model CardTransaction {
-  id            Int             @id @default(autoincrement())
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  amount        Float
-  transactionId String
-  type          TransactionType
-  cardId        Int
-  Card          Card            @relation(fields: [cardId], references: [id])
+  id              Int             @id @default(autoincrement())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  amount          Float
+  transactionId   String
+  transactionType TransactionType
+  cardId          Int
+  Card            Card            @relation(fields: [cardId], references: [id])
 }
 
 model Transaction {
-  id            Int             @id @default(autoincrement())
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  amount        Float
-  transactionId String
-  type          TransactionType
-  bankAccountId Int
-  userId        Int?
-  categoryId    Int?
-  bankAccount   BankAccount     @relation(fields: [bankAccountId], references: [id])
-  Category      Category?       @relation(fields: [categoryId], references: [id])
-  User          User?           @relation(fields: [userId], references: [id])
+  id              Int             @id @default(autoincrement())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  amount          Float
+  transactionId   String
+  transactionType TransactionType
+  accountId       Int
+  userId          Int?
+  categoryId      Int?
+  Account         Account         @relation(fields: [accountId], references: [id])
+  Category        Category?       @relation(fields: [categoryId], references: [id])
+  User            User?           @relation(fields: [userId], references: [id])
 }
 
 model Transfer {
@@ -106,67 +100,62 @@ model Transfer {
   updatedAt       DateTime        @updatedAt
   amount          Float
   transactionId   String
-  type            TransactionType
-  bankAccountId   Int
-  toBankAccountId Int
+  transactionType TransactionType
+  fromAccountId   Int
+  toAccountId     Int
   userId          Int?
-  bankAccount     BankAccount     @relation("TransferFromBankAccount", fields: [bankAccountId], references: [id])
-  toBankAccount   BankAccount     @relation("TransferToBankAccount", fields: [toBankAccountId], references: [id])
+  fromAccount     Account         @relation("TransferFromAccount", fields: [fromAccountId], references: [id])
+  toAccount       Account         @relation("TransferToAccount", fields: [toAccountId], references: [id])
   User            User?           @relation(fields: [userId], references: [id])
 }
 
 model Category {
-  id             Int           @id @default(autoincrement())
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  name           String
-  color          String
-  icon           String
-  userId         Int
-  categoryType   CategoryType
-  parentId       Int?
-  Budget         Budget[]
-  parentCategory Category?     @relation("SubCategory", fields: [parentId], references: [id])
-  subCategory    Category[]    @relation("SubCategory")
-  User           User          @relation(fields: [userId], references: [id])
-  Transaction    Transaction[]
+  id              Int             @id @default(autoincrement())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  name            String
+  color           String
+  icon            String
+  userId          Int
+  transactionType TransactionType @default(EXPENSE)
+  parentId        Int?
+  Budget          Budget[]
+  parentCategory  Category?       @relation("SubCategory", fields: [parentId], references: [id])
+  subCategory     Category[]      @relation("SubCategory")
+  User            User            @relation(fields: [userId], references: [id])
+  Transaction     Transaction[]
 }
 
 model Budget {
-  id              Int            @id @default(autoincrement())
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id              Int             @id @default(autoincrement())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   allocatedAmount Float
   spentAmount     Float
   remainingAmount Float
   startDate       DateTime
   endDate         DateTime
-  categoryType    CategoryType
-  budgetType      BudgetType
-  budgetStatus    BudgetStatus
-  budgetRollover  BudgetRollover
-  categoryId      Int
+  transactionType TransactionType @default(EXPENSE)
+  budgetType      BudgetType      @default(MONTHLY)
+  budgetStatus    BudgetStatus    @default(ACTIVE)
+  budgetRollover  BudgetRollover  @default(OFF)
+  categoryId      Int             @unique
   userId          Int
-  Category        Category       @relation(fields: [categoryId], references: [id])
-  User            User           @relation(fields: [userId], references: [id])
+  Category        Category        @relation(fields: [categoryId], references: [id])
+  User            User            @relation(fields: [userId], references: [id])
 }
 
-enum BankAccountType {
+enum AccountType {
   SAVINGS
   CHECKING
 }
 
-enum BankAccountStatus {
+enum AccountStatus {
   ACTIVE
   INACTIVE
 }
 
 enum TransactionType {
-  DEPOSIT
-  WITHDRAWAL
-}
-
-enum CategoryType {
   INCOME
   EXPENSE
 }
@@ -185,4 +174,34 @@ enum BudgetStatus {
 enum BudgetRollover {
   ON
   OFF
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum UserSessionStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CardType {
+  VISA
+  MASTERCARD
+  AMERICANEXPRESS
+  DISCOVER
+  DINERSCLUB
+  JCB
+  UNIONPAY
+}
+
+enum CardStatus {
+  ACTIVE
+  INACTIVE
 }
